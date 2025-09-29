@@ -8,40 +8,33 @@ import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 
-public class PullFromCachedVoronoiDF implements SeededDensityFunction {
+public class PullCachedCenterDF implements SeededDensityFunction {
 
-    private static final MapCodec<PullFromCachedVoronoiDF> MAP_CODEC = RecordCodecBuilder.mapCodec((instance) ->
+    private static final MapCodec<PullCachedCenterDF> MAP_CODEC = RecordCodecBuilder.mapCodec((instance) ->
             instance.group(
-                    Codec.intRange(0,4).optionalFieldOf("mode", 0).forGetter((input) -> input.mode),
                     Codec.intRange(1,9).optionalFieldOf("ordinal", 1).forGetter((input) -> input.ordinal),
-                    DensityFunction.HOLDER_HELPER_CODEC.fieldOf("cache").forGetter((input) -> input.cache)
-            ).apply(instance, (PullFromCachedVoronoiDF::new))
+                    DensityFunction.HOLDER_HELPER_CODEC.fieldOf("cache").forGetter((input) -> input.cache),
+                    DensityFunction.HOLDER_HELPER_CODEC.fieldOf("sampler").forGetter((input) -> input.sampler)
+            ).apply(instance, (PullCachedCenterDF::new))
     );
 
-    public static final KeyDispatchDataCodec<PullFromCachedVoronoiDF> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
+    public static final KeyDispatchDataCodec<PullCachedCenterDF> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
-    private final int mode;
     private final int ordinal;
     private final DensityFunction cache;
     private final CachedVoronoiDF cachedVoronoi;
+    private final DensityFunction sampler;
 
-    public PullFromCachedVoronoiDF(int mode, int ordinal, DensityFunction cache) {
-        this.mode = mode;
+    public PullCachedCenterDF(int ordinal, DensityFunction cache, DensityFunction sampler) {
         this.ordinal = ordinal;
         this.cache = cache;
         this.cachedVoronoi = getCachedVoronoiDF(cache);
+        this.sampler = sampler;
     }
 
     @Override
     public double compute(FunctionContext pos) {
-        return switch (mode) {
-            default -> this.cachedVoronoi.getDistance(pos, ordinal - 1);
-            case 1 -> this.cachedVoronoi.getValue(pos, ordinal - 1);
-            case 2 -> this.cachedVoronoi.getVelocity(pos, ordinal - 1);
-            case 3 -> this.cachedVoronoi.getPassive(pos, ordinal - 1);
-            case 4 -> this.cachedVoronoi.getDirection(pos, ordinal - 1);
-            case 5 -> this.cachedVoronoi.getRelDirection(pos, ordinal - 1);
-        };
+        return this.cachedVoronoi.sampleAtCenter(pos, ordinal, sampler);
     }
 
     @Override
@@ -80,7 +73,7 @@ public class PullFromCachedVoronoiDF implements SeededDensityFunction {
     }
 
     @Override
-    public PullFromCachedVoronoiDF initialize(long levelSeed) {
+    public PullCachedCenterDF initialize(long levelSeed) {
         if (!this.cachedVoronoi.initialized()) this.cachedVoronoi.initialize(levelSeed);
         return this;
     }

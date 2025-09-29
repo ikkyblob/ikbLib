@@ -46,6 +46,10 @@ public class CachedVoronoiDF implements SeededDensityFunction {
         return 0;
     }
 
+    public double sampleAtCenter(FunctionContext blockPos, int ordinal, DensityFunction sampler) {
+        return this.noise != null ? this.noise.sample(blockPos, flat, scale, jitter, metric, ordinal, sampler) : 0;
+    }
+
     public double getDistance(FunctionContext pos, int index) {
         return this.maxCheck > index && this.noise != null ? this.noise.getDistances(pos, flat, scale, jitter, metric, maxCheck)[index] : 0;
     }
@@ -60,6 +64,38 @@ public class CachedVoronoiDF implements SeededDensityFunction {
 
     public double getPassive(FunctionContext pos, int index) {
         return this.maxCheck > index && this.noise != null ? this.noise.getPassives(pos, flat, scale, jitter, metric, maxCheck)[index] : 0;
+    }
+
+    public double getDirection(FunctionContext pos, int index) {
+        return this.maxCheck > index && this.noise != null ? this.noise.getDirections(pos, flat, scale, jitter, metric, maxCheck)[index] : 0;
+    }
+
+    public double getRelDirection(FunctionContext pos, int index) {
+        return this.maxCheck > index && this.noise != null ? this.noise.getRelDirections(pos, flat, scale, jitter, metric, maxCheck)[index] : 0;
+    }
+
+    public double[] getDistances(FunctionContext pos) {
+        return this.noise != null ? this.noise.getDistances(pos, flat, scale, jitter, metric, maxCheck) : new double[1];
+    }
+
+    public double[] getVelocities(FunctionContext pos) {
+        return this.noise != null ? this.noise.getVelocities(pos, flat, scale, jitter, metric, maxCheck) : new double[1];
+    }
+
+    public double[] getValues(FunctionContext pos) {
+        return this.noise != null ? this.noise.getValues(pos, flat, scale, jitter, metric, maxCheck) : new double[1];
+    }
+
+    public double[] getPassives(FunctionContext pos) {
+        return this.noise != null ? this.noise.getPassives(pos, flat, scale, jitter, metric, maxCheck) : new double[1];
+    }
+
+    public double[] getDirections(FunctionContext pos) {
+        return this.noise != null ? this.noise.getDirections(pos, flat, scale, jitter, metric, maxCheck) : new double[1];
+    }
+
+    public double[] getRelDirections(FunctionContext pos) {
+        return this.noise != null ? this.noise.getRelDirections(pos, flat, scale, jitter, metric, maxCheck) : new double[1];
     }
 
     @Override

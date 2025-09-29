@@ -1,6 +1,7 @@
 package net.ikb.library.world.gen.densityfunction;
 
 import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.phys.Vec3;
 
 import static net.ikb.library.world.gen.densityfunction.VoronoiNoise.RandVecs;
@@ -38,6 +39,24 @@ public class VoronoiPlate {
     public Vec3i getIndex() {return this.index;}
 
     public Vec3 getCenter() {return this.center;}
+
+    public DensityFunction.FunctionContext getCenterPos(double scale) {
+        return new DensityFunction.FunctionContext() {
+
+            final int x = (int) (center.x() * scale);
+            final int y = (int) (center.y() * scale);
+            final int z = (int) (center.z() * scale);
+
+            @Override
+            public int blockX() {return this.x;}
+            @Override
+            public int blockY() {return this.y;}
+            @Override
+            public int blockZ() {return this.z;}
+
+        };
+
+    }
 
     public Vec3i velocity() {return new Vec3i(hash % 3 - 2, 0, ((hash % 9) - (hash % 3)) / 3 - 2);}
 

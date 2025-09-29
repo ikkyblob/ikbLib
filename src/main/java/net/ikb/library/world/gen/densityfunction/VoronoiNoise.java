@@ -1,6 +1,7 @@
 package net.ikb.library.world.gen.densityfunction;
 
 import net.minecraft.core.Vec3i;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.phys.Vec3;
 
@@ -58,6 +59,10 @@ public class VoronoiNoise {
 
 
     public double getVoronoi(DensityFunction.FunctionContext blockPos, boolean flat, double scale, double jitter, int metric, int mode, int ordinal) {
+        if (ordinal == 1) switch (mode) {
+            case 2, 5 -> {return 0;}
+            case 3 -> {return 1;}
+        }
 
         double x = ((double) blockPos.blockX()) / scale;
         double y = flat ? 0 : ((double) blockPos.blockY()) / scale;
@@ -80,11 +85,11 @@ public class VoronoiNoise {
 
                 Vec3i checkIndex = new Vec3i(posIndex.getX() + xi, posIndex.getY(), posIndex.getZ() + zi);
 
-                VoronoiPlate checkPlate;
+                VoronoiPlate checkPlate = null;
                 if (this.MEMOIZED_PLATES.containsKey(checkIndex)) checkPlate = this.MEMOIZED_PLATES.get(checkIndex);
-                else {
+                if (!this.MEMOIZED_PLATES.containsKey(checkIndex) || checkPlate == null) {
                     checkPlate = new VoronoiPlate(seed, checkIndex, jitter);
-                    this.MEMOIZED_PLATES.put(checkIndex, checkPlate);
+                    this.MEMOIZED_PLATES.put(checkIndex, checkPlate == null ? new VoronoiPlate(seed, checkIndex, jitter) : checkPlate);
                 }
 
                 double checkDistance = checkPlate.getDist(new Vec3(x, y, z), flat, metric);
@@ -110,7 +115,10 @@ public class VoronoiNoise {
             case 1 -> sortPlates[ordinal - 1].getValue();
             case 2 -> sortPlates[0].relativeVelocity(sortPlates[ordinal - 1]);
             case 3 -> sortPlates[0].velocity() == sortPlates[ordinal - 1].velocity() ? 1 : 0;
+            case 4 -> Mth.atan2(sortPlates[ordinal - 1].getCenter().z() - z, sortPlates[ordinal - 1].getCenter().x() - x) - 1.5707964F;
+            case 5 -> Mth.atan2(sortPlates[ordinal - 1].getCenter().z() - sortPlates[0].getCenter().z(), sortPlates[ordinal - 1].getCenter().x() - sortPlates[0].getCenter().x()) - 1.5707964F;
         };
+
     }
 
 
