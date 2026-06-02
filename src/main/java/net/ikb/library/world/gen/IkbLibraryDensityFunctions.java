@@ -22,6 +22,12 @@ public class IkbLibraryDensityFunctions {
     public static final DeferredHolder<MapCodec<? extends DensityFunction>, MapCodec<VoronoiDF>>
             VORONOI = DENSITY_FUNCTION_TYPE.register("voronoi", VoronoiDF.CODEC::codec);
 
+    public static final DeferredHolder<MapCodec<? extends DensityFunction>, MapCodec<VoronoiDistanceDF>>
+            VORONOI_DIST = DENSITY_FUNCTION_TYPE.register("voronoi_dist", VoronoiDistanceDF.CODEC::codec);
+
+    public static final DeferredHolder<MapCodec<? extends DensityFunction>, MapCodec<VoronoiCenterDF>>
+            VORONOI_CENTER = DENSITY_FUNCTION_TYPE.register("voronoi_center", VoronoiCenterDF.CODEC::codec);
+
     public static final DeferredHolder<MapCodec<? extends DensityFunction>, MapCodec<NearestSeaDF>>
             NEAR_SEA = DENSITY_FUNCTION_TYPE.register("near_sea", NearestSeaDF.CODEC::codec);
 

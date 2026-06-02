@@ -1,12 +1,16 @@
 package net.ikb.library.world.gen.densityfunction;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Vec3i;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
+
+import java.util.HashMap;
 
 public class PullCachedCenterDF implements SeededDensityFunction {
 
@@ -32,9 +36,18 @@ public class PullCachedCenterDF implements SeededDensityFunction {
         this.sampler = sampler;
     }
 
+    HashMap<Vec3i, double[]> memoSamples = new HashMap<>();
+
     @Override
     public double compute(FunctionContext pos) {
-        return this.cachedVoronoi.sampleAtCenter(pos, ordinal, sampler);
+        Vec3i index = this.cachedVoronoi.getNearest(pos, ordinal - 1).getIndex();
+        if (memoSamples.containsKey(index)) {
+            double[] val = memoSamples.get(index);
+            if (val != null) return val[0];
+        }
+        double[] val = this.cachedVoronoi.getSamples(pos, ordinal, sampler);
+        memoSamples.put(index, val);
+        return val[0];
     }
 
     @Override

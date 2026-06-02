@@ -1,12 +1,16 @@
 package net.ikb.library.world.gen.densityfunction;
 
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 public class VoronoiNoise {
 
@@ -64,6 +68,33 @@ public class VoronoiNoise {
             case 3 -> {return 1;}
         }
 
+        VoronoiPlate[] sortPlates = calcNearest(blockPos, flat, scale, jitter, metric, ordinal);
+
+        return switch (mode) {
+            default -> sortPlates[ordinal - 1].getDist(new Vec3(
+                    ((double) blockPos.blockX()) / scale,
+                    flat ? 0 : ((double) blockPos.blockY()) / scale,
+                    ((double) blockPos.blockZ()) / scale), flat, metric);
+            case 1 -> sortPlates[ordinal - 1].getValue();
+            case 2 -> sortPlates[0].relativeVelocity(sortPlates[ordinal - 1]);
+            case 3 -> sortPlates[0].velocity() == sortPlates[ordinal - 1].velocity() ? 1 : 0;
+            case 4 -> Mth.atan2(sortPlates[ordinal - 1].getCenter().z() - (((double) blockPos.blockZ()) / scale), sortPlates[ordinal - 1].getCenter().x() - (((double) blockPos.blockX()) / scale)) - 1.5707964F;
+            case 5 -> Mth.atan2(sortPlates[ordinal - 1].getCenter().z() - sortPlates[0].getCenter().z(), sortPlates[ordinal - 1].getCenter().x() - sortPlates[0].getCenter().x()) - 1.5707964F;
+        };
+
+    }
+
+    public double getDistance(DensityFunction.FunctionContext blockPos, boolean flat, double scale, double jitter, int metric, int ordinal, boolean rel) {
+        if (rel && ordinal == 1) return 0;
+
+        double[] sortDistances = calcDistances(blockPos, flat, scale, jitter, metric, ordinal);
+
+        return rel ? sortDistances[ordinal - 1] - sortDistances[0] : sortDistances[ordinal - 1];
+
+    }
+
+    private VoronoiPlate[] calcNearest(DensityFunction.FunctionContext blockPos, boolean flat, double scale, double jitter, int metric, int ordinal) {
+
         double x = ((double) blockPos.blockX()) / scale;
         double y = flat ? 0 : ((double) blockPos.blockY()) / scale;
         double z = ((double) blockPos.blockZ()) / scale;
@@ -80,46 +111,89 @@ public class VoronoiNoise {
 
         Arrays.fill(sortDistances, Double.MAX_VALUE);
 
-        for (int xi = -1; xi <= 1; xi++) {
-            for (int zi = -1; zi <= 1; zi++) {
+        for (int xi = -1; xi <= 1; xi++) for (int zi = -1; zi <= 1; zi++) {
 
-                Vec3i checkIndex = new Vec3i(posIndex.getX() + xi, posIndex.getY(), posIndex.getZ() + zi);
+            Vec3i checkIndex = new Vec3i(posIndex.getX() + xi, posIndex.getY(), posIndex.getZ() + zi);
 
-                VoronoiPlate checkPlate = null;
-                if (this.MEMOIZED_PLATES.containsKey(checkIndex)) checkPlate = this.MEMOIZED_PLATES.get(checkIndex);
-                if (!this.MEMOIZED_PLATES.containsKey(checkIndex) || checkPlate == null) {
-                    checkPlate = new VoronoiPlate(seed, checkIndex, jitter);
-                    this.MEMOIZED_PLATES.put(checkIndex, checkPlate == null ? new VoronoiPlate(seed, checkIndex, jitter) : checkPlate);
-                }
+            VoronoiPlate checkPlate = getPlate(checkIndex, jitter);
+            if (checkPlate == null) checkPlate = getPlate(checkIndex, jitter);
 
-                double checkDistance = checkPlate.getDist(new Vec3(x, y, z), flat, metric);
+            double checkDistance = checkPlate.getDist(new Vec3(x, y, z), flat, metric);
 
-                for (int i = 0; i < ordinal; i++) {
-                    if (checkDistance < sortDistances[i]) {
-                        for (int j = ordinal - 1; j > i; j--) {
-                            if (sortPlates[j - 1] != null) {
-                                sortDistances[j] = sortDistances[j - 1];
-                                sortPlates[j] = sortPlates[j - 1];
-                            }
+            for (int i = 0; i < ordinal; i++) {
+                if (checkDistance < sortDistances[i]) {
+                    if (ordinal > 1) for (int j = ordinal - 1; j > i; j--) {
+                        if (sortPlates[j - 1] != null) {
+                            sortDistances[j] = sortDistances[j - 1];
+                            sortPlates[j] = sortPlates[j - 1];
                         }
-                        sortDistances[i] = checkDistance;
-                        sortPlates[i] = checkPlate;
-                        break;
                     }
+                    sortDistances[i] = checkDistance;
+                    sortPlates[i] = checkPlate;
+                    break;
                 }
             }
         }
 
-        return switch (mode) {
-            default -> sortDistances[ordinal - 1];
-            case 1 -> sortPlates[ordinal - 1].getValue();
-            case 2 -> sortPlates[0].relativeVelocity(sortPlates[ordinal - 1]);
-            case 3 -> sortPlates[0].velocity() == sortPlates[ordinal - 1].velocity() ? 1 : 0;
-            case 4 -> Mth.atan2(sortPlates[ordinal - 1].getCenter().z() - z, sortPlates[ordinal - 1].getCenter().x() - x) - 1.5707964F;
-            case 5 -> Mth.atan2(sortPlates[ordinal - 1].getCenter().z() - sortPlates[0].getCenter().z(), sortPlates[ordinal - 1].getCenter().x() - sortPlates[0].getCenter().x()) - 1.5707964F;
-        };
+        return sortPlates;
 
     }
 
+    private double[] calcDistances(DensityFunction.FunctionContext blockPos, boolean flat, double scale, double jitter, int metric, int ordinal) {
+
+        double x = ((double) blockPos.blockX()) / scale;
+        double y = flat ? 0 : ((double) blockPos.blockY()) / scale;
+        double z = ((double) blockPos.blockZ()) / scale;
+
+        Vec3i posIndex = new Vec3i(
+                (int) (x >= 0 ? x + 0.5 : x - 0.5),
+                (int) (y >= 0 ? y + 0.5 : y - 0.5),
+                (int) (z >= 0 ? z + 0.5 : z - 0.5)
+        );
+
+        double[] sortDistances = new double[ordinal];
+
+        Arrays.fill(sortDistances, Double.MAX_VALUE);
+
+        for (int xi = -1; xi <= 1; xi++) for (int zi = -1; zi <= 1; zi++) {
+
+            Vec3i checkIndex = new Vec3i(posIndex.getX() + xi, posIndex.getY(), posIndex.getZ() + zi);
+
+            VoronoiPlate checkPlate = getPlate(checkIndex, jitter);
+            if (checkPlate == null) checkPlate = getPlate(checkIndex, jitter);
+
+            double checkDistance = checkPlate.getDist(new Vec3(x, y, z), flat, metric);
+
+            for (int i = 0; i < ordinal; i++) {
+                if (checkDistance < sortDistances[i]) {
+                    if (ordinal > 1) for (int j = ordinal - 1; j > i; j--) {
+                        if (sortDistances[j - 1] != Double.MAX_VALUE) {
+                            sortDistances[j] = sortDistances[j - 1];
+                        }
+                    }
+                    sortDistances[i] = checkDistance;
+                    break;
+                }
+            }
+        }
+
+        return sortDistances;
+
+    }
+
+    private VoronoiPlate getPlate(Vec3i index, double jitter) {
+        VoronoiPlate plate = null;
+        if (this.MEMOIZED_PLATES.containsKey(index)) plate = this.MEMOIZED_PLATES.get(index);
+        if (!this.MEMOIZED_PLATES.containsKey(index) || plate == null) {
+            plate = new VoronoiPlate(seed, index, jitter);
+            this.MEMOIZED_PLATES.put(index, plate == null ? new VoronoiPlate(seed, index, jitter) : plate);
+            return plate == null ? new VoronoiPlate(seed, index, jitter) : plate;
+        }
+        return plate;
+    }
+
+    public VoronoiPlate getPlate(DensityFunction.FunctionContext blockPos, boolean flat, double scale, double jitter, int metric, int ordinal) {
+        return calcNearest(blockPos, flat, scale, jitter, metric, ordinal)[ordinal - 1];
+    }
 
 }

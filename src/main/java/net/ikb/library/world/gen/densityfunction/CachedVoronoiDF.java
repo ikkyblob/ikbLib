@@ -1,8 +1,10 @@
 package net.ikb.library.world.gen.densityfunction;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Vec3i;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
@@ -46,9 +48,23 @@ public class CachedVoronoiDF implements SeededDensityFunction {
         return 0;
     }
 
-    public double sampleAtCenter(FunctionContext blockPos, int ordinal, DensityFunction sampler) {
-        return this.noise != null ? this.noise.sample(blockPos, flat, scale, jitter, metric, ordinal, sampler) : 0;
+    public boolean flat() {return this.flat;}
+    public double scale() {return this.scale;}
+    public double jitter() {return this.jitter;}
+    public int metric() {return this.metric;}
+
+    public VoronoiPlate getNearest(FunctionContext blockPos, int index) {
+        return this.maxCheck > index && this.noise != null ? this.noise.getNearest(blockPos, flat, scale, jitter, metric, maxCheck)[0] : new VoronoiPlate(0, Vec3i.ZERO, jitter);
     }
+
+    public double[] getSamples(FunctionContext pos, int ordinal, DensityFunction sampler) {
+        return new double[]{this.noise != null ? this.noise.sample(pos, flat, scale, jitter, metric, ordinal, sampler) : 0};
+    }
+
+    public Pair<VoronoiPlate[], double[]> getWatersheds(Vec3i index, DensityFunction sampler) {
+        return this.noise != null ? this.noise.getWatersheds(index, jitter, sampler, scale, flat, metric) : CachedVoronoiNoise.getDefaultWatersheds();
+    }
+
 
     public double getDistance(FunctionContext pos, int index) {
         return this.maxCheck > index && this.noise != null ? this.noise.getDistances(pos, flat, scale, jitter, metric, maxCheck)[index] : 0;
@@ -130,5 +146,4 @@ public class CachedVoronoiDF implements SeededDensityFunction {
     }
 
     public boolean initialized() {return this.noise != null;}
-
 }

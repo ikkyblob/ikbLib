@@ -12,7 +12,7 @@ public class PullFromCachedVoronoiDF implements SeededDensityFunction {
 
     private static final MapCodec<PullFromCachedVoronoiDF> MAP_CODEC = RecordCodecBuilder.mapCodec((instance) ->
             instance.group(
-                    Codec.intRange(0,4).optionalFieldOf("mode", 0).forGetter((input) -> input.mode),
+                    Codec.intRange(0,5).optionalFieldOf("mode", 0).forGetter((input) -> input.mode),
                     Codec.intRange(1,9).optionalFieldOf("ordinal", 1).forGetter((input) -> input.ordinal),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("cache").forGetter((input) -> input.cache)
             ).apply(instance, (PullFromCachedVoronoiDF::new))

@@ -58,6 +58,25 @@ public class VoronoiPlate {
 
     }
 
+    public DensityFunction.FunctionContext getCenterPos(double scale, boolean flat) {
+        if (flat) return new DensityFunction.FunctionContext() {
+
+            final int x = (int) (center.x() * scale);
+            final int y = 0;
+            final int z = (int) (center.z() * scale);
+
+            @Override
+            public int blockX() {return this.x;}
+            @Override
+            public int blockY() {return this.y;}
+            @Override
+            public int blockZ() {return this.z;}
+
+        };
+        else return getCenterPos(scale);
+
+    }
+
     public Vec3i velocity() {return new Vec3i(hash % 3 - 2, 0, ((hash % 9) - (hash % 3)) / 3 - 2);}
 
     public int relativeVelocity(VoronoiPlate otherPlate) {
