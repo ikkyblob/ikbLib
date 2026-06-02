@@ -1,16 +1,12 @@
 package net.ikb.library.world.gen.densityfunction;
 
-import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 public class VoronoiNoise {
 
